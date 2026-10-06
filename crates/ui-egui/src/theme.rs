@@ -264,12 +264,33 @@ fn default_labels() -> [Color32; 17] {
     })
 }
 
+/// The Japanese fonts from the optional craft-fonts build input (`CRAFT_FONTS_DIR`, see
+/// `effectcraft_text::fonts::CRAFT_FONTS`), appended to every family after the app's own fonts and
+/// egui's defaults, BIZ UDPGothic first (its Bold first in the semibold family). Nothing is added
+/// in a build without craft-fonts. The web build has no system fonts, so this is how it gets
+/// Japanese.
+fn add_craft_fonts(fonts: &mut FontDefinitions) {
+    let craft = effectcraft_text::fonts::craft_fonts_jpan();
+    let key = |f: &effectcraft_text::fonts::CraftFont| format!("craft-{}-{}", f.family, f.style).to_ascii_lowercase().replace(' ', "-");
+    for f in craft.iter().copied() {
+        fonts.font_data.insert(key(f), Arc::new(FontData::from_static(f.bytes)));
+    }
+    for (family, list) in fonts.families.iter_mut() {
+        let mut ordered = craft.clone();
+        if *family == FontFamily::Name("semibold".into()) {
+            ordered.sort_by_key(|f| !(f.family.eq_ignore_ascii_case(effectcraft_text::fonts::CRAFT_UI_FAMILY) && f.style.eq_ignore_ascii_case("Bold")));
+        }
+        list.extend(ordered.into_iter().map(key));
+    }
+}
+
 static INTER_REGULAR: &[u8] = include_bytes!("../../../assets/fonts/Inter-Regular.ttf");
 static INTER_MEDIUM: &[u8] = include_bytes!("../../../assets/fonts/Inter-Medium.ttf");
 static INTER_SEMIBOLD: &[u8] = include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf");
 static JETBRAINS_MONO: &[u8] = include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf");
 
-/// Install fonts (Inter, Inter Medium/SemiBold, JetBrains Mono) and egui visuals.
+/// Install fonts (Inter, Inter Medium/SemiBold, JetBrains Mono, plus craft-fonts' Japanese faces
+/// when built with them) and egui visuals.
 pub fn install(ctx: &egui::Context, t: &Tokens) {
     let mut fonts = FontDefinitions::default();
     fonts.font_data.insert("inter".into(), Arc::new(FontData::from_static(INTER_REGULAR)));
@@ -280,6 +301,7 @@ pub fn install(ctx: &egui::Context, t: &Tokens) {
     fonts.families.entry(FontFamily::Monospace).or_default().insert(0, "jbmono".into());
     fonts.families.insert(FontFamily::Name("semibold".into()), vec!["inter-semibold".into(), "inter".into()]);
     fonts.families.insert(FontFamily::Name("medium".into()), vec!["inter-medium".into(), "inter".into()]);
+    add_craft_fonts(&mut fonts);
     ctx.set_fonts(fonts);
     apply_visuals(ctx, t);
 }

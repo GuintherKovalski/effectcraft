@@ -552,7 +552,7 @@ What keeps it fast:
 - **Lazy open.** A project file carries its footage metadata, so File ▸ Open is read + parse +
   swap. Nothing is decoded until a frame needs it, expressions compile on first evaluation
   (cached by text), and system fonts are scanned only when a text layer asks for a family that
-  isn't bundled. The footage files are checked afterwards in the background (`footage.check`, a
+  isn't bundled (or embedded from craft-fonts, the optional `CRAFT_FONTS_DIR` build input). The footage files are checked afterwards in the background (`footage.check`, a
   "Checking footage" job in the Progress panel): missing items are flagged, items saved without
   metadata are probed, and the project is not marked modified. The desktop app does this after
   every open (`Session::check_footage_on_open`); headless sessions run `footage.check {wait:true}`.
